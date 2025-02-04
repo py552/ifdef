@@ -1,0 +1,99 @@
+Help on package ifdef:
+
+NAME
+    ifdef - # https://github.com/py552/ifdef
+
+PACKAGE CONTENTS
+    global_vars
+    import_wrapper
+    test (package)
+
+CLASSES
+    builtins.object
+        Preprocessor
+    
+    class Preprocessor(builtins.object)
+     |  Preprocessor(input_file_path='C:\\Python311-64\\Lib\\pydoc.py', output_file_path='', defines={}, remove_meta=False, save=False, quiet=False, input_encoding='utf-8', output_encoding='cp1252')
+     |  
+     |  Methods defined here:
+     |  
+     |  __init__(self, input_file_path='C:\\Python311-64\\Lib\\pydoc.py', output_file_path='', defines={}, remove_meta=False, save=False, quiet=False, input_encoding='utf-8', output_encoding='cp1252')
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |  
+     |  define(self, name, val=True)
+     |          Adds variable definition to the store as expected from a #define directive.
+     |          The directive can contains no value as it would be tested with a #ifdef directive or
+     |          with a value for an evaluation as in an #if directive.
+     |      
+     |      :params
+     |          name (str): definition name
+     |      
+     |          val (str): definition value when it exists. Default is None
+     |  
+     |  exit_error(self, directive)
+     |          Prints error and interrupts execution
+     |      
+     |      :params
+     |          directive (str): faulty directive
+     |  
+     |  lexer(self, line: str) -> int
+     |          Analyse the `line`. This method attempts to find a known directive and, when found, to
+     |          understand it and to perform appropriate action.
+     |      
+     |      :params
+     |          line (str): line of code to analyse
+     |      
+     |      :return
+     |          exclude: should the line be excluded in the final output?
+     |              0   == normal line -- leave as is
+     |              100 == include by condition
+     |              500 == exclude by condition
+     |              599 == exclude by #exclude
+     |              900 == metadata: line is directive #ifdef/#else/#endif and etc
+     |              999 == metadata: line is directive preprocessor.parse(..)
+     |  
+     |  parse(self, module_name: str, file_path: str, **kwargs)
+     |      Main method:
+     |      - reset internal counters/values
+     |      - check & warn about deprecation
+     |      - starts the parsing of the input file
+     |      - warn of unclosed #ifdef blocks if any
+     |      - trigger post-process activities
+     |  
+     |  undefine(self, define)
+     |          Removes variable definition from store as expected from an #undef directive
+     |      
+     |      :params
+     |          define (str): definition name
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |  
+     |  __dict__
+     |      dictionary for instance variables (if defined)
+     |  
+     |  __weakref__
+     |      list of weak references to the object (if defined)
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |  
+     |  defines = {}
+
+FUNCTIONS
+    ast_unparse lambda node
+
+DATA
+    __coauthor__ = 'Hendi O L, Epikem, Laurent Pinson, Evan Plaice, rherau...
+    preprocessor = <ifdef.Preprocessor object>
+
+VERSION
+    0.01
+
+AUTHOR
+    py552
+
+FILE
+    c:\repo\ifdef\ifdef\__init__.py
+
+
