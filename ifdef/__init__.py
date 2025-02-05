@@ -2,7 +2,7 @@
 __author__ = 'py552'
 # based on https://github.com/interpreters/pypreprocessor
 __coauthor__ = 'Hendi O L, Epikem, Laurent Pinson, Evan Plaice, rherault-pro, tcumby, ThomasZecha, elrandira'
-__version__ = '0.01'
+__version__ = '0.1.2'
 
 import sys
 import os
@@ -36,7 +36,8 @@ from .import_wrapper import ImportWrapper, ProcessedModuleIsLoaded
 
 
 class Preprocessor:
-    defines = {}
+    __defines = {}
+    __delete_lines_containing = set()
 
     def __init__(
         self,
@@ -48,6 +49,7 @@ class Preprocessor:
         quiet=False,
         input_encoding=sys.stdin.encoding,
         output_encoding=sys.stdout.encoding,
+        delete_lines_containing=set()
     ):
         # public variables
         if isinstance(defines, collections__Sequence):
@@ -64,9 +66,17 @@ class Preprocessor:
         self.quiet = quiet
         self.input_encoding = input_encoding
         self.output_encoding = output_encoding
+        self.delete_lines_containing = delete_lines_containing
 
         # private variables
         self.__reset_internal()
+
+    @property
+    def delete_lines_containing(self):
+        return self.__delete_lines_containing
+    @delete_lines_containing.setter
+    def delete_lines_containing(self, delete_lines_containing: set):
+        self.__delete_lines_containing = delete_lines_containing
 
     def __reset_internal(self):
         self.__linenum = 0
@@ -96,7 +106,7 @@ class Preprocessor:
         except:
             # assume val is string
             pass
-        self.defines[name]=val
+        self.__defines[name]=val
 
     def undefine(self, define):
         """
@@ -106,7 +116,7 @@ class Preprocessor:
             define (str): definition name
 
         """
-        self.defines.pop(define, None)
+        self.__defines.pop(define, None)
 
     def __is_defined(self, define):
         """
@@ -116,7 +126,7 @@ class Preprocessor:
             define (str): definition name
 
         """
-        return define in self.defines
+        return define in self.__defines
 
     def __evaluate_if(self, line: str) -> bool:
         """
@@ -127,9 +137,8 @@ class Preprocessor:
 
         """
         try:
-            # replace C-style bool format by Python's
-            line = line.replace('&&', 'and').replace('||', 'or').replace('!','not ')
-            return eval(line, self.defines) or False
+            # line = line.replace('&&', 'and').replace('||', 'or').replace('!','not ') # replace C-style bool format by Python's
+            return eval(line, self.__defines) or False
         except BaseException as e:
             print(str(e))
             self.exit_error('#if')
@@ -194,9 +203,8 @@ class Preprocessor:
         """
         line = line.strip()
 
-        if not (self.__ifblocks or self.__excludeblock):
-            if line.startswith("preprocessor.parse("):
-                return 999
+        if not (self.__ifblocks or self.__excludeblock) and line.startswith("preprocessor.parse("):
+            return 999
 
         transform = 0
         if self.__excludeblock:
@@ -215,8 +223,12 @@ class Preprocessor:
             # elif transform >= 500:  # excluded blocks by condition
             transform = 500
 
+
         if not line.startswith('#'): #No directive
+            if line.startswith(tuple(self.delete_lines_containing)):
+                transform = 555 # delete_lines_containing
             return transform
+
 
         if self.__is_directive(line, '#define', 2,3):
             self.define(*line.split()[1:])
@@ -349,6 +361,9 @@ class Preprocessor:
                     if transform >= 900:    # preprocessor.parse(..)/#define/#ifdef and etc
                         if not self.remove_meta:
                             buffer_processed_module += "#M# " + line
+                    elif transform == 555:  # delete_lines_containing
+                        indent_len = len(line) - len(line.lstrip(" \t"))
+                        buffer_processed_module += f"{line[:indent_len]}pass # line contains # {line[indent_len:]}"
                     elif transform >= 500:  # excluded blocks by condition
                         buffer_processed_module += "#E# " + line
                     elif transform >= 100:  # included blocks by condition
@@ -369,7 +384,7 @@ class Preprocessor:
             if self.__ifblocks:
                 error_msg = f"{len(self.__ifblocks)} unclosed Ifdefblocks in {self.input_file_path}:\n"
                 for i, item in enumerate(self.__ifconditions):
-                    if (item in self.defines) != self.__ifblocks[i]:
+                    if (item in self.__defines) != self.__ifblocks[i]:
                         cond = ' else '
                     else:
                         cond = ' if '
@@ -409,10 +424,16 @@ class Preprocessor:
 
         ##########################################
 
-        del sys.modules[module_name]
+        if module_name != '__main__':
+            del sys.modules[module_name]
+
         loaded_module = types.ModuleType(module_name)
         loaded_module.__file__ = self.output_file_path or self.input_file_path
-        exec(buffer_processed_module, loaded_module.__dict__ )
+        try:
+            exec(buffer_processed_module, loaded_module.__dict__ )
+        except Exception as ex:
+            print(f"******* {ex} in '{self.input_file_path}'")
+            raise ex
         sys.modules[module_name] = loaded_module
 
         if module_name == '__main__':
